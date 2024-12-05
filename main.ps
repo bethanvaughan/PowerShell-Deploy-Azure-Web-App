@@ -1,1 +1,67 @@
+# Interactive PowerShell script to deploy an Azure Web App
+
+# Function to prompt for input with default value
+function Get-Input {
+    param (
+        [string]$Prompt,
+        [string]$Default
+    )
+    
+    $input = Read-Host "$Prompt (Default: $Default)"
+    if ([string]::IsNullOrWhiteSpace($input)) {
+        return $Default
+    }
+    return $input
+}
+
+# Login to Azure
+Write-Host "Logging in to Azure..."
+Connect-AzAccount
+
+# Prompt for subscription selection
+$subscriptions = Get-AzSubscription
+$subscription = $subscriptions | Out-GridView -PassThru -Title "Select your Azure subscription"
+if ($subscription -eq $null) {
+    Write-Host "No subscription selected. Exiting." -ForegroundColor Red
+    exit
+}
+Set-AzContext -SubscriptionId $subscription.Id
+
+# Prompt for resource group
+$resourceGroupName = Get-Input -Prompt "Enter Resource Group Name" -Default "MyResourceGroup"
+$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
+if ($resourceGroup -eq $null) {
+    $location = Get-Input -Prompt "Enter Azure Region" -Default "EastUS"
+    Write-Host "Creating Resource Group: $resourceGroupName in $location..."
+    $resourceGroup = New-AzResourceGroup -Name $resourceGroupName -Location $location
+} else {
+    Write-Host "Resource Group '$resourceGroupName' already exists."
+}
+
+# Prompt for App Service Plan
+$appServicePlanName = Get-Input -Prompt "Enter App Service Plan Name" -Default "MyAppServicePlan"
+$appServicePlan = Get-AzAppServicePlan -ResourceGroupName $resourceGroupName -Name $appServicePlanName -ErrorAction SilentlyContinue
+if ($appServicePlan -eq $null) {
+    $sku = Get-Input -Prompt "Enter SKU for App Service Plan (e.g., F1, B1)" -Default "F1"
+    Write-Host "Creating App Service Plan: $appServicePlanName..."
+    $appServicePlan = New-AzAppServicePlan -Name $appServicePlanName -ResourceGroupName $resourceGroupName -Location $resourceGroup.Location -Tier $sku -NumberOfWorkers 1
+} else {
+    Write-Host "App Service Plan '$appServicePlanName' already exists."
+}
+
+# Prompt for Web App Name
+$webAppName = Get-Input -Prompt "Enter Web App Name" -Default "MyWebApp$($Random:random 1000 9999)"
+$webApp = Get-AzWebApp -ResourceGroupName $resourceGroupName -Name $webAppName -ErrorAction SilentlyContinue
+if ($webApp -eq $null) {
+    Write-Host "Creating Web App: $webAppName..."
+    $webApp = New-AzWebApp -Name $webAppName -ResourceGroupName $resourceGroupName -Location $resourceGroup.Location -AppServicePlan $appServicePlanName
+} else {
+    Write-Host "Web App '$webAppName' already exists."
+}
+
+# Output details
+Write-Host "Deployment Complete!" -ForegroundColor Green
+Write-Host "Resource Group: $resourceGroupName"
+Write-Host "App Service Plan: $appServicePlanName"
+Write-Host "Web App: $webAppName"
 
