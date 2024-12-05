@@ -14,24 +14,13 @@ function Get-Input {
     return $input
 }
 
-# Login to Azure
-Write-Host "Logging in to Azure..."
-Connect-AzAccount
-
-# Prompt for subscription selection
-$subscriptions = Get-AzSubscription
-$subscription = $subscriptions | Out-GridView -PassThru -Title "Select your Azure subscription"
-if ($subscription -eq $null) {
-    Write-Host "No subscription selected. Exiting." -ForegroundColor Red
-    exit
-}
-Set-AzContext -SubscriptionId $subscription.Id
-
 # Prompt for resource group
+
 $resourceGroupName = Get-Input -Prompt "Enter Resource Group Name" -Default "MyResourceGroup"
 $resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
+
 if ($resourceGroup -eq $null) {
-    $location = Get-Input -Prompt "Enter Azure Region" -Default "EastUS"
+    $location = Get-Input -Prompt "Enter Azure Region" -Default "uksouth"
     Write-Host "Creating Resource Group: $resourceGroupName in $location..."
     $resourceGroup = New-AzResourceGroup -Name $resourceGroupName -Location $location
 } else {
@@ -39,8 +28,10 @@ if ($resourceGroup -eq $null) {
 }
 
 # Prompt for App Service Plan
+
 $appServicePlanName = Get-Input -Prompt "Enter App Service Plan Name" -Default "MyAppServicePlan"
 $appServicePlan = Get-AzAppServicePlan -ResourceGroupName $resourceGroupName -Name $appServicePlanName -ErrorAction SilentlyContinue
+
 if ($appServicePlan -eq $null) {
     $sku = Get-Input -Prompt "Enter SKU for App Service Plan (e.g., F1, B1)" -Default "F1"
     Write-Host "Creating App Service Plan: $appServicePlanName..."
@@ -50,8 +41,10 @@ if ($appServicePlan -eq $null) {
 }
 
 # Prompt for Web App Name
+
 $webAppName = Get-Input -Prompt "Enter Web App Name" -Default "MyWebApp$($Random:random 1000 9999)"
 $webApp = Get-AzWebApp -ResourceGroupName $resourceGroupName -Name $webAppName -ErrorAction SilentlyContinue
+
 if ($webApp -eq $null) {
     Write-Host "Creating Web App: $webAppName..."
     $webApp = New-AzWebApp -Name $webAppName -ResourceGroupName $resourceGroupName -Location $resourceGroup.Location -AppServicePlan $appServicePlanName
